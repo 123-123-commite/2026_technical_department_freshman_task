@@ -1,0 +1,9 @@
+.gocache
+.venv
+__pycache__
+.pytest_cache
+data
+app
+tests
+pytest.ini
+requirements.txt
