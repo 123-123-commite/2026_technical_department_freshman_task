@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#12342e" />
+    <meta name="description" content="杭电校园失物招领，让每件遗失物都能回家。" />
+    <title>拾光 · 杭电失物招领</title>
+  </head>
+  <body>
+    <div id="app">
+      <main id="launch-help" hidden style="box-sizing:border-box;max-width:720px;margin:12vh auto;padding:40px;color:#12342e;font:16px/1.7 system-ui,sans-serif;background:#f7f5ed;border:1px solid #d9d6ca">
+        <p style="margin:0 0 8px;color:#c85c3d;letter-spacing:.12em">拾光 · 杭电校园失物招领</p>
+        <h1 style="margin:0 0 16px;font-size:28px">请通过本地服务打开拾光</h1>
+        <p>你现在是直接打开了项目文件。浏览器不能用这种方式加载应用模块，所以页面无法启动。</p>
+        <p>请回到仓库根目录，按 <a href="../README.md">QOKIK/README.md 的“本地运行”步骤</a>分别启动 API 和前端服务。</p>
+        <p>前端启动后访问 <code>http://127.0.0.1:5173</code>。</p>
+      </main>
+    </div>
+    <script>
+      if (window.location.protocol === 'file:') {
+        document.getElementById('launch-help').hidden = false
+      }
+    </script>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
