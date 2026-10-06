@@ -1,0 +1,953 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>杭电寻物招领平台</title>
+    <!-- ============================================================
+         纯本地版（localStorage）
+         - 不需要云开发 / 云函数 / 云数据库，双击就能打开
+         - 数据存在浏览器本地（手机、电脑各自独立，不互通）
+         - 手机端：把本文件 + banner.jpg 传到静态托管，手机打开链接即可用
+         - 管理员：在登录框输入下面的管理员账号密码，直接就是管理员
+         - 图片：选图后自动压缩存进本地，能正常显示
+         ============================================================ -->
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            background-color: #f7f8fa;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            color: #222;
+            padding: 12px;
+            max-width: 1260px;
+            margin: 0 auto;
+        }
+        .banner {
+            width: 100%;
+            height: 320px;
+            background: url("./banner.jpg") center / cover no-repeat;
+            border-radius: 20px;
+            margin-bottom: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+        .banner::after {
+            content: "";
+            position: absolute;
+            left: 0;
+            bottom: 0;
+            width: 100%;
+            height: 100px;
+            background: linear-gradient(to bottom, transparent, #f7f8fa);
+        }
+        .header-bar {
+            position: absolute;
+            top:16px;
+            left:16px;
+            right:16px;
+            display:flex;
+            justify-content: space-between;
+            align-items:flex-start;
+        }
+        .user-card {
+            background:rgba(255,255,255,0.42);
+            backdrop-filter: blur(10px);
+            border-radius:999px;
+            padding:8px 14px;
+            display:flex;
+            align-items:center;
+            gap:8px;
+            box-shadow:0 2px 8px rgba(0,0,0,0.06);
+        }
+        .user-avatar{
+            width:34px;
+            height:34px;
+            border-radius:50%;
+            background:#cce0ff;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            font-size:17px;
+        }
+        .user-info .name{
+            font-size:14px;
+            font-weight:600;
+        }
+        .user-info .id-text{
+            font-size:12px;
+            color:#555;
+        }
+        .filter-wrap{
+            position:relative;
+        }
+        .filter-btn{
+            background:rgba(255,255,255,0.42);
+            backdrop-filter: blur(10px);
+            border:none;
+            border-radius:999px;
+            padding:8px 16px;
+            font-size:14px;
+            cursor:pointer;
+        }
+        .filter-dropdown{
+            display:none;
+            position:absolute;
+            right:0;
+            margin-top:8px;
+            width:280px;
+            background:#fff;
+            border-radius:14px;
+            box-shadow:0 4px 16px rgba(0,0,0,0.12);
+            padding:14px;
+            z-index:20;
+        }
+        .filter-dropdown.show{
+            display:block;
+        }
+        .filter-group-title{
+            font-size:13px;
+            color:#888;
+            margin:10px 0 6px;
+        }
+        .filter-item{
+            padding:7px 10px;
+            border-radius:6px;
+            cursor:pointer;
+            font-size:14px;
+        }
+        .filter-item.active{
+            background:#2b78f5;
+            color:#ffffff;
+        }
+        .filter-item:hover:not(.active){
+            background:#f1f3f8;
+        }
+        .search-area{
+            display:flex;
+            gap:10px;
+            margin-bottom:16px;
+        }
+        #searchInput{
+            flex:1;
+            padding:12px 16px;
+            border-radius:12px;
+            border:none;
+            background:#fff;
+            box-shadow:0 1px 6px rgba(0,0,0,0.06);
+            font-size:15px;
+        }
+        .search-btn{
+            padding:12px 22px;
+            border-radius:12px;
+            border:none;
+            background:#2b78f5;
+            color:#fff;
+            cursor:pointer;
+        }
+        .tab-switch-row{
+            display:grid;
+            grid-template-columns: 1fr 1fr;
+            gap:12px;
+            margin-bottom:20px;
+        }
+        .tab-item{
+            padding:14px 16px;
+            background:#ffffff;
+            border-radius:14px;
+            text-align:center;
+            cursor:pointer;
+            border:1px solid #eee;
+        }
+        .tab-item.active{
+            background:#e8f0fe;
+            border-color:#2b78f5;
+        }
+        .card-list{
+            display:grid;
+            grid-template-columns:repeat(auto-fill,minmax(260px,1fr));
+            gap:16px;
+        }
+        .note-card{
+            background:#fff;
+            border-radius:14px;
+            overflow:hidden;
+            box-shadow:0 1px 6px rgba(0,0,0,0.06);
+        }
+        .card-img-wrap{
+            height:180px;
+            background:#f3f4f6;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            color:#999;
+        }
+        .card-img-wrap img{
+            width:100%;
+            height:100%;
+            object-fit:cover;
+        }
+        .card-body{
+            padding:12px;
+        }
+        .type-tag{
+            display:inline-block;
+            font-size:12px;
+            padding:2px 6px;
+            background:#e8f0fe;
+            color:#2b78f5;
+            border-radius:4px;
+            margin-bottom:8px;
+        }
+        .card-title{
+            font-size:16px;
+            font-weight:600;
+            margin-bottom:6px;
+        }
+        .card-desc{
+            font-size:13px;
+            color:#555;
+            margin-bottom:4px;
+        }
+        .card-contact{
+            font-size:13px;
+            color:#444;
+            margin-bottom:4px;
+        }
+        .card-time{
+            font-size:12px;
+            color:#888;
+        }
+        .admin-panel{
+            background:#fff0cc;
+            border:1px solid #ffd580;
+            border-radius:14px;
+            padding:16px;
+            margin:16px 0;
+        }
+        .admin-op-btn{
+            padding:6px 12px;
+            margin:2px;
+            border:none;
+            border-radius:6px;
+            cursor:pointer;
+        }
+        .btn-pass{
+            background:#36c66c;
+            color:white;
+        }
+        .btn-reject{
+            background:#ff5959;
+            color:white;
+        }
+        button, .filter-item, .tab-item{
+            transition: transform 0.12s ease,opacity 0.12s ease;
+        }
+        button:active,.filter-item:active,.tab-item:active{
+            transform: scale(0.97);
+            opacity:0.92;
+        }
+        .modal-mask{
+            position:fixed;
+            top:0;
+            left:0;
+            width:100%;
+            height:100%;
+            background:rgba(0,0,0,0.45);
+            display:none;
+            align-items:center;
+            justify-content:center;
+            z-index:99;
+        }
+        .modal-mask.show{
+            display:flex;
+        }
+        .modal{
+            width:92%;
+            max-width:420px;
+            background:#fff;
+            border-radius:16px;
+            padding:20px;
+        }
+        .modal h3{
+            margin-bottom:14px;
+        }
+        .modal input,.modal select{
+            width:100%;
+            padding:10px;
+            margin-bottom:10px;
+            border:1px solid #ddd;
+            border-radius:8px;
+        }
+        .modal-buttons{
+            display:flex;
+            gap:10px;
+            margin-top:8px;
+        }
+        .modal-buttons button{
+            flex:1;
+            padding:10px;
+            border-radius:8px;
+            border:none;
+            background:#2b78f5;
+            color:#fff;
+            cursor:pointer;
+        }
+        .img-preview-box{
+            margin:6px 0 10px;
+            text-align:center;
+        }
+        .img-preview-box img{
+            max-width:100%;
+            max-height:160px;
+            border-radius:8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="banner">
+        <div class="header-bar">
+            <div class="user-card">
+                <div class="user-avatar">👤</div>
+                <div class="user-info">
+                    <div class="name" id="userInfoText">未登录</div>
+                    <div class="id-text" id="adminTip">寻物招领系统</div>
+                </div>
+            </div>
+            <div class="filter-wrap">
+                <button class="filter-btn" onclick="toggleFilter()">筛选 ▾</button>
+                <div class="filter-dropdown" id="filterDropdown">
+                    <div class="filter-group-title">物品种类</div>
+                    <div class="filter-item" onclick="setCategory('all')">全部</div>
+                    <div class="filter-item" onclick="setCategory('证件')">证件</div>
+                    <div class="filter-item" onclick="setCategory('电子设备')">电子设备</div>
+                    <div class="filter-item" onclick="setCategory('钥匙')">钥匙</div>
+                    <div class="filter-item" onclick="setCategory('钱包')">钱包</div>
+                    <div class="filter-item" onclick="setCategory('书籍')">书籍</div>
+                    <div class="filter-item" onclick="setCategory('其他')">其他</div>
+                    <div class="filter-group-title">物品颜色</div>
+                    <div class="filter-item" onclick="setColor('all')">全部颜色</div>
+                    <div class="filter-item" onclick="setColor('黑')">黑色</div>
+                    <div class="filter-item" onclick="setColor('白')">白色</div>
+                    <div class="filter-item" onclick="setColor('蓝')">蓝色</div>
+                    <div class="filter-item" onclick="setColor('红')">红色</div>
+                    <div class="filter-group-title">时间排序</div>
+                    <div class="filter-item" onclick="setSort('new')">最新优先</div>
+                    <div class="filter-item" onclick="setSort('old')">最早优先</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="search-area">
+        <input id="searchInput" placeholder="搜索标题、描述、颜色">
+        <button class="search-btn" onclick="renderList()">搜索</button>
+    </div>
+    <div class="tab-switch-row">
+        <div class="tab-item" id="tabFound" onclick="switchTab('found')">我捡到物品（招领）</div>
+        <div class="tab-item" id="tabLost" onclick="switchTab('lost')">我丢失物品（寻物）</div>
+    </div>
+    <div style="margin-bottom:12px;">
+        <button onclick="openLogin()">登录</button>
+        <button onclick="openRegister()">注册</button>
+        <button onclick="openPublish()">发布帖子</button>
+        <button onclick="openMyPosts()">我的帖子</button>
+        <button onclick="logout()">退出登录</button>
+    </div>
+    <!--管理员面板，isAdmin=true才显示-->
+    <div class="admin-panel" id="adminPanel" style="display:none;">
+        <h3>🔧 管理员 - 待审核帖子</h3>
+        <div id="adminReviewList"></div>
+    </div>
+    <div class="card-list" id="cardList"></div>
+    <!--登录弹窗-->
+    <div class="modal-mask" id="loginMask">
+        <div class="modal">
+            <h3>登录账号</h3>
+            <input type="text" id="loginUser" placeholder="用户名">
+            <input type="password" id="loginPwd" placeholder="密码">
+            <div class="modal-buttons">
+                <button onclick="doLogin()">登录</button>
+                <button onclick="closeLogin()">关闭</button>
+            </div>
+        </div>
+    </div>
+    <!--注册弹窗-->
+    <div class="modal-mask" id="regMask">
+        <div class="modal">
+            <h3>注册账号</h3>
+            <input type="text" id="regUser" placeholder="用户名">
+            <input type="password" id="regPwd" placeholder="密码">
+            <div class="modal-buttons">
+                <button onclick="doRegister()">注册</button>
+                <button onclick="closeRegister()">关闭</button>
+            </div>
+        </div>
+    </div>
+    <!--发布弹窗-->
+    <div class="modal-mask" id="publishMask">
+        <div class="modal">
+            <h3>发布帖子</h3>
+            <select id="pubType">
+                <option value="lost">我丢失物品</option>
+                <option value="found">我捡到物品</option>
+            </select>
+            <input type="text" id="pubName" placeholder="物品名称（必填）">
+            <input type="text" id="pubColor" placeholder="物品颜色">
+            <input type="text" id="pubCategory" placeholder="物品种类">
+            <input type="text" id="pubDesc" placeholder="物品描述">
+            <input type="text" id="pubPhone" placeholder="联系电话（必填）">
+            <input type="file" id="pubImg" accept="image/*">
+            <div class="img-preview-box" id="pubImgPreview"></div>
+            <div class="modal-buttons">
+                <button onclick="doPublish()">提交发布</button>
+                <button onclick="closePublish()">关闭</button>
+            </div>
+        </div>
+    </div>
+    <!--编辑帖子弹窗-->
+    <div class="modal-mask" id="editMask">
+        <div class="modal">
+            <h3>编辑帖子（修改后需重新审核）</h3>
+            <input type="hidden" id="editPostId">
+            <select id="editType">
+                <option value="lost">我丢失物品</option>
+                <option value="found">我捡到物品</option>
+            </select>
+            <input type="text" id="editName" placeholder="物品名称（必填）">
+            <input type="text" id="editColor" placeholder="物品颜色">
+            <input type="text" id="editCategory" placeholder="物品种类">
+            <input type="text" id="editDesc" placeholder="物品描述">
+            <input type="text" id="editPhone" placeholder="联系电话（必填）">
+            <input type="file" id="editImg" accept="image/*">
+            <div class="img-preview-box" id="editImgPreview"></div>
+            <p style="font-size:12px;color:#888;margin:4px 0;">不选新图片则保留原图片</p>
+            <div class="modal-buttons">
+                <button onclick="doEdit()">保存修改</button>
+                <button onclick="closeEdit()">关闭</button>
+            </div>
+        </div>
+    </div>
+    <!--我的帖子弹窗-->
+    <div class="modal-mask" id="myPostsMask">
+        <div class="modal" style="max-width:600px;max-height:80vh;overflow-y:auto;">
+            <h3>我的帖子</h3>
+            <div id="myPostsList"></div>
+            <div class="modal-buttons">
+                <button onclick="closeMyPosts()">关闭</button>
+            </div>
+        </div>
+    </div>
+
+<script>
+// ============================================================
+//  纯本地版（localStorage）—— 最终版
+//  不需要云开发 / 云函数 / 云数据库 / 任何权限配置
+//  数据存在浏览器本地：手机和电脑各自独立，互不影响
+//  手机端也能用：把 index.html + banner.jpg 传到静态托管，
+//  手机浏览器打开链接，就能发帖、传图、审核
+// ============================================================
+
+// ========== 【可修改】管理员账号密码 ==========
+// 在登录框输入下面这个账号密码，登录后直接就是管理员，不用单独注册
+const ADMIN_USER = "admin";      // ← 改成你自己的管理员账号
+const ADMIN_PWD  = "admin123";   // ← 改成你自己的管理员密码
+
+// ========== 图片压缩参数 ==========
+const IMG_MAX_WIDTH = 800;       // 最长边（像素），手机拍的图也会被压缩
+const IMG_QUALITY   = 0.7;       // 压缩质量 0~1
+
+// ========== 数据读写封装 ==========
+// 帖子：{_id,type,name,color,category,desc,phone,imgUrl,author,status,time}
+function getPosts(){
+    try{
+        const s = localStorage.getItem("posts");
+        return s ? JSON.parse(s) : [];
+    }catch(e){ return []; }
+}
+function savePosts(arr){
+    localStorage.setItem("posts", JSON.stringify(arr));
+}
+// 用户：{username,password,isAdmin}
+function getUsers(){
+    try{
+        const s = localStorage.getItem("users");
+        return s ? JSON.parse(s) : [];
+    }catch(e){ return []; }
+}
+function saveUsers(arr){
+    localStorage.setItem("users", JSON.stringify(arr));
+}
+// 当前登录用户
+function getCurrent(){
+    try{
+        const s = localStorage.getItem("currentUser");
+        return s ? JSON.parse(s) : null;
+    }catch(e){ return null; }
+}
+function saveCurrent(user){
+    if(user) localStorage.setItem("currentUser", JSON.stringify(user));
+    else localStorage.removeItem("currentUser");
+}
+
+// ========== 工具函数 ==========
+function genId(){
+    return "p" + Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+}
+function fmtTime(t){
+    if(!t) return "";
+    const d = new Date(t);
+    const p = n => String(n).padStart(2,"0");
+    return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+// 图片压缩：选图 → 压缩 → base64 字符串（手机拍的大图也能存下）
+function compressImage(file){
+    return new Promise((resolve, reject)=>{
+        const reader = new FileReader();
+        reader.onload = e => {
+            const img = new Image();
+            img.onload = () => {
+                let w = img.width, h = img.height;
+                if(w > IMG_MAX_WIDTH){
+                    h = Math.round(h * IMG_MAX_WIDTH / w);
+                    w = IMG_MAX_WIDTH;
+                }
+                const canvas = document.createElement("canvas");
+                canvas.width = w;
+                canvas.height = h;
+                canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+                resolve(canvas.toDataURL("image/jpeg", IMG_QUALITY));
+            };
+            img.onerror = () => reject(new Error("图片解析失败"));
+            img.src = e.target.result;
+        };
+        reader.onerror = () => reject(new Error("文件读取失败"));
+        reader.readAsDataURL(file);
+    });
+}
+
+// ========== 全局状态 ==========
+let currentTab = "lost";
+let currentCategory = "all";
+let currentColor = "all";
+let currentSort = "new";
+let userInfo = null;              // {username,isAdmin}
+let selectImgFile = null;         // 发布弹窗选的图片
+let editImgFile = null;           // 编辑弹窗选的图片
+
+// ========== 页面初始化 ==========
+window.onload = async function(){
+    initFirstRun();
+    userInfo = getCurrent();      // 刷新页面保持登录
+    await refreshUserUi();
+    await renderList();
+};
+
+function initFirstRun(){
+    // 首次打开放几条示例帖子，方便看效果（不想要可以删）
+    if(getPosts().length === 0){
+        const now = Date.now();
+        const demo = [
+            { _id: genId(), type:"lost",     name:"黑色校园卡", color:"黑", category:"证件", desc:"卡套上有个小贴纸，图书馆附近丢失", phone:"13800000001", imgUrl:"", author:ADMIN_USER, status:"approved", itemState:"寻找中", time: now - 3600*1000 },
+            { _id: genId(), type:"found",    name:"蓝色雨伞",   color:"蓝", category:"其他", desc:"三教二楼捡到，伞柄有名字贴纸",   phone:"13800000002", imgUrl:"", author:ADMIN_USER, status:"approved", itemState:"待认领", time: now - 7200*1000 },
+            { _id: genId(), type:"lost",     name:"白色充电宝", color:"白", category:"电子设备", desc:"小米充电宝，教室考试时忘带走了", phone:"13800000003", imgUrl:"", author:ADMIN_USER, status:"approved", itemState:"寻找中", time: now - 10800*1000 }
+        ];
+        savePosts(demo);
+    }
+}
+
+// ========== 用户界面 ==========
+async function refreshUserUi(){
+    if(!userInfo){
+        document.querySelector("#userInfoText").innerText = "未登录";
+        document.querySelector("#adminTip").innerText = "寻物招领系统";
+        document.querySelector("#adminPanel").style.display = "none";
+        return;
+    }
+    document.querySelector("#userInfoText").innerText = "已登录：" + userInfo.username;
+    if(userInfo.isAdmin){
+        document.querySelector("#adminTip").innerText = "✅管理员账号";
+        document.querySelector("#adminPanel").style.display = "block";
+        await loadAdminReview();
+    }else{
+        document.querySelector("#adminTip").innerText = "普通用户";
+        document.querySelector("#adminPanel").style.display = "none";
+    }
+}
+function logout(){
+    saveCurrent(null);
+    userInfo = null;
+    refreshUserUi();
+    renderList();
+}
+
+// ========== 筛选 / 搜索 / 排序 ==========
+function toggleFilter(){
+    document.querySelector("#filterDropdown").classList.toggle("show");
+}
+function setCategory(cat){
+    currentCategory = cat;
+    document.querySelector("#filterDropdown").classList.remove("show");
+    renderList();
+}
+function setColor(clr){
+    currentColor = clr;
+    document.querySelector("#filterDropdown").classList.remove("show");
+    renderList();
+}
+function setSort(st){
+    currentSort = st;
+    document.querySelector("#filterDropdown").classList.remove("show");
+    renderList();
+}
+function switchTab(tab){
+    currentTab = tab;
+    document.querySelectorAll(".tab-item").forEach(el=>el.classList.remove("active"));
+    if(tab==="found") document.querySelector("#tabFound").classList.add("active");
+    if(tab==="lost") document.querySelector("#tabLost").classList.add("active");
+    renderList();
+}
+
+// ========== 注册 / 登录 ==========
+function openLogin(){ document.querySelector("#loginMask").classList.add("show"); }
+function closeLogin(){ document.querySelector("#loginMask").classList.remove("show"); }
+async function doLogin(){
+    const u = document.querySelector("#loginUser").value.trim();
+    const p = document.querySelector("#loginPwd").value.trim();
+    if(!u || !p){ alert("用户名密码不能为空"); return; }
+
+    // ★ 管理员：账号密码对上了，直接就是管理员，不需要注册
+    if(u === ADMIN_USER && p === ADMIN_PWD){
+        userInfo = { username: ADMIN_USER, isAdmin: true };
+        saveCurrent(userInfo);
+        await refreshUserUi();
+        closeLogin();
+        alert("管理员登录成功");
+        renderList();
+        return;
+    }
+
+    // 普通用户：查注册表
+    const users = getUsers();
+    const found = users.find(x => x.username === u && x.password === p);
+    if(!found){ alert("用户名或密码错误"); return; }
+    userInfo = { username: found.username, isAdmin: false };
+    saveCurrent(userInfo);
+    await refreshUserUi();
+    closeLogin();
+    alert("登录成功");
+    renderList();
+}
+function openRegister(){ document.querySelector("#regMask").classList.add("show"); }
+function closeRegister(){ document.querySelector("#regMask").classList.remove("show"); }
+async function doRegister(){
+    const u = document.querySelector("#regUser").value.trim();
+    const p = document.querySelector("#regPwd").value.trim();
+    if(!u || !p){ alert("用户名密码不能为空"); return; }
+    if(u === ADMIN_USER){ alert("该用户名不可注册"); return; }
+    const users = getUsers();
+    if(users.find(x => x.username === u)){ alert("用户名已被注册"); return; }
+    users.push({ username: u, password: p, isAdmin: false });
+    saveUsers(users);
+    alert("注册成功，请登录");
+    closeRegister();
+}
+
+// ========== 发布帖子（含图片） ==========
+function openPublish(){
+    if(!userInfo){ alert("请先登录账号"); return; }
+    document.querySelector("#publishMask").classList.add("show");
+}
+function closePublish(){
+    document.querySelector("#publishMask").classList.remove("show");
+    selectImgFile = null;
+    document.querySelector("#pubImg").value = "";
+    document.querySelector("#pubImgPreview").innerHTML = "";
+}
+// 发布弹窗选图 → 实时预览（手机端会调起相册/拍照）
+document.querySelector("#pubImg").addEventListener("change", function(e){
+    const file = e.target.files[0];
+    selectImgFile = file || null;
+    const box = document.querySelector("#pubImgPreview");
+    if(file){
+        const reader = new FileReader();
+        reader.onload = ev => { box.innerHTML = `<img src="${ev.target.result}">`; };
+        reader.readAsDataURL(file);
+    }else{
+        box.innerHTML = "";
+    }
+});
+async function doPublish(){
+    const type     = document.querySelector("#pubType").value;
+    const name     = document.querySelector("#pubName").value.trim();
+    const color    = document.querySelector("#pubColor").value.trim();
+    const category = document.querySelector("#pubCategory").value.trim();
+    const desc     = document.querySelector("#pubDesc").value.trim();
+    const phone    = document.querySelector("#pubPhone").value.trim();
+    if(!name || !phone){ alert("物品名称、联系电话必填"); return; }
+
+    let imgUrl = "";
+    if(selectImgFile){
+        try{
+            imgUrl = await compressImage(selectImgFile);   // 压缩成 base64 存本地
+        }catch(err){
+            console.error(err);
+            alert("图片处理失败，先不带图片提交");
+        }
+    }
+    const post = {
+        _id: genId(),
+        type, name, color, category, desc, phone, imgUrl,
+        author: userInfo.username,
+        status: "pending",       // 审核状态：发布后等待管理员审核
+        itemState: type === "lost" ? "寻找中" : "待认领",   // 物品状态：寻物=寻找中，招领=待认领
+        time: Date.now()
+    };
+    try{
+        const list = getPosts();
+        list.unshift(post);
+        savePosts(list);
+        alert("发布成功！等待管理员审核");
+        closePublish();
+    }catch(err){
+        console.error(err);
+        alert("保存失败：本地存储空间可能不足（图片太大），请换小一点的图片");
+    }
+}
+
+// ========== 首页列表（只显示已审核通过的帖子） ==========
+async function renderList(){
+    const container = document.querySelector("#cardList");
+    let list = getPosts().filter(p => p.status === "approved");
+
+    if(currentTab === "lost") list = list.filter(p => p.type === "lost");
+    else list = list.filter(p => p.type === "found");
+
+    if(currentCategory !== "all") list = list.filter(p => p.category === currentCategory);
+    if(currentColor !== "all") list = list.filter(p => p.color === currentColor);
+
+    const kw = document.querySelector("#searchInput").value.trim();
+    if(kw) list = list.filter(p => (p.name + (p.desc||"") + (p.color||"")).includes(kw));
+
+    list.sort((a,b) => currentSort === "new" ? b.time - a.time : a.time - b.time);
+
+    container.innerHTML = "";
+    if(list.length === 0){
+        container.innerHTML = "<div>暂无帖子</div>";
+        return;
+    }
+    list.forEach(item => {
+        let imgHtml = item.imgUrl ? `<img src="${item.imgUrl}">` : "无图片";
+        const tagText = item.type === "lost" ? "寻物" : "招领";
+        // 物品状态徽章：寻找中(蓝) 待认领(橙) 已找到/已认领(绿)
+        const stateColors = {"寻找中":"#2b78f5","待认领":"#f59e0b","已找到":"#16a34a","已认领":"#16a34a"};
+        const stateHtml = item.itemState
+            ? `<span style="display:inline-block;font-size:12px;padding:2px 6px;background:#eef4ff;color:${stateColors[item.itemState]||"#666"};border-radius:4px;margin-left:6px;">${item.itemState}</span>`
+            : "";
+        container.innerHTML += `
+        <div class="note-card">
+            <div class="card-img-wrap">${imgHtml}</div>
+            <div class="card-body">
+                <span class="type-tag">${tagText}</span>${stateHtml}
+                <div class="card-title">${item.name||""}</div>
+                <div class="card-desc">颜色：${item.color||"无"}｜类别：${item.category||""}</div>
+                <div class="card-desc">描述：${item.desc||""}</div>
+                <div class="card-contact">联系：${item.phone||""}</div>
+                <div class="card-time">发布时间：${fmtTime(item.time)}</div>
+            </div>
+        </div>`;
+    });
+}
+
+// ========== 管理员审核 ==========
+async function loadAdminReview(){
+    if(!userInfo || !userInfo.isAdmin) return;
+    const list = getPosts().filter(p => p.status === "pending");
+    const wrap = document.querySelector("#adminReviewList");
+    wrap.innerHTML = "";
+    if(list.length === 0){ wrap.innerHTML = "<p>暂无待审核帖子</p>"; return; }
+    list.forEach(item => {
+        const imgThumb = item.imgUrl ? `<img src="${item.imgUrl}" style="max-width:60px;max-height:60px;border-radius:6px;display:block;margin:4px 0;">` : "";
+        wrap.innerHTML += `
+        <div style="border:1px solid #ffdd88;padding:8px;margin:6px 0;border-radius:8px;">
+            <div>${item.name}｜${item.type==='lost'?'寻物':'招领'}｜作者：${item.author}</div>
+            <div>${item.desc||""}</div>
+            ${imgThumb}
+            <button class="admin-op-btn btn-pass" onclick="doAudit('${item._id}','pass')">✅通过</button>
+            <button class="admin-op-btn btn-reject" onclick="doAudit('${item._id}','reject')">❌驳回</button>
+        </div>`;
+    });
+}
+async function doAudit(postId, status){
+    const list = getPosts();
+    const item = list.find(p => p._id === postId);
+    if(!item) return;
+    // 统一状态：pass → approved（已通过），reject → rejected（已驳回）
+    item.status = status === "pass" ? "approved" : "rejected";
+    savePosts(list);
+    alert(status === "pass" ? "已通过" : "已驳回");
+    await loadAdminReview();
+    await renderList();
+}
+
+// ========== 我的帖子 ==========
+function openMyPosts(){
+    if(!userInfo){ alert("请先登录"); return; }
+    document.querySelector("#myPostsMask").classList.add("show");
+    loadMyPosts();
+}
+function closeMyPosts(){
+    document.querySelector("#myPostsMask").classList.remove("show");
+}
+async function loadMyPosts(){
+    if(!userInfo) return;
+    const wrap = document.querySelector("#myPostsList");
+    const list = getPosts()
+        .filter(p => p.author === userInfo.username)
+        .sort((a,b) => b.time - a.time);
+    if(list.length === 0){
+        wrap.innerHTML = "<p>你还没有发布过帖子</p>";
+        return;
+    }
+    let html = "";
+    list.forEach(item => {
+        let statusLabel = "";
+        if(item.status === "pending") statusLabel = `<span style="color:#999;">🟡待审核</span>`;
+        else if(item.status === "approved") statusLabel = `<span style="color:green;">🟢已公开</span>`;
+        else if(item.status === "rejected") statusLabel = `<span style="color:red;">🔴已驳回</span>`;
+        const typeText = item.type === "lost" ? "寻物" : "招领";
+        // 物品状态徽章
+        const stateColors = {"寻找中":"#2b78f5","待认领":"#f59e0b","已找到":"#16a34a","已认领":"#16a34a"};
+        const stateBadge = item.itemState
+            ? `<span style="display:inline-block;font-size:12px;padding:2px 6px;background:#eef4ff;color:${stateColors[item.itemState]||"#666"};border-radius:4px;margin-left:6px;">${item.itemState}</span>`
+            : "";
+        // 状态操作按钮：寻物可标记已找到，招领可标记已认领；已标记的也可以改回来
+        let stateBtn = "";
+        if(item.itemState === "寻找中"){
+            stateBtn = `<button class="admin-op-btn" style="background:#16a34a;color:white;" onclick="markState('${item._id}','已找到')">✅标记已找到</button>`;
+        }else if(item.itemState === "待认领"){
+            stateBtn = `<button class="admin-op-btn" style="background:#16a34a;color:white;" onclick="markState('${item._id}','已认领')">✅标记已认领</button>`;
+        }else if(item.itemState === "已找到"){
+            stateBtn = `<button class="admin-op-btn" style="background:#888;color:white;" onclick="markState('${item._id}','寻找中')">↩️改回寻找中</button>`;
+        }else if(item.itemState === "已认领"){
+            stateBtn = `<button class="admin-op-btn" style="background:#888;color:white;" onclick="markState('${item._id}','待认领')">↩️改回待认领</button>`;
+        }
+        const imgThumb = item.imgUrl ? `<img src="${item.imgUrl}" style="max-width:70px;max-height:70px;border-radius:6px;display:block;margin:4px 0;">` : "";
+        html += `
+        <div style="border:1px solid #eee;padding:10px;margin:8px 0;border-radius:8px;">
+            <div style="margin-bottom:6px;">${statusLabel} <span class="type-tag">${typeText}</span>${stateBadge}</div>
+            <div style="font-weight:600;margin-bottom:4px;">${item.name}</div>
+            <div style="font-size:13px;color:#555;margin-bottom:4px;">颜色：${item.color||"无"} | 类别：${item.category||"无"}</div>
+            <div style="font-size:13px;color:#555;margin-bottom:4px;">描述：${item.desc||"无"}</div>
+            <div style="font-size:13px;color:#444;margin-bottom:6px;">联系：${item.phone}</div>
+            ${imgThumb}
+            ${stateBtn}
+            <button class="admin-op-btn" style="background:#2b78f5;color:white;" onclick="openEdit('${item._id}')">编辑</button>
+            <button class="admin-op-btn" style="background:#ff5959;color:white;" onclick="deletePost('${item._id}')">🗑️删除</button>
+        </div>`;
+    });
+    wrap.innerHTML = html;
+}
+
+// ========== 标记物品状态（我的帖子） ==========
+async function markState(postId, newState){
+    const list = getPosts();
+    const item = list.find(p => p._id === postId);
+    if(!item) return;
+    item.itemState = newState;
+    savePosts(list);
+    alert("状态已更新为：" + newState);
+    await loadMyPosts();
+    await renderList();
+}
+
+// ========== 删除帖子（我的帖子） ==========
+async function deletePost(postId){
+    const item = getPosts().find(p => p._id === postId);
+    if(!item) return;
+    if(!confirm("确定删除这条帖子吗？\n「" + item.name + "」删除后不可恢复")) return;
+    const list = getPosts().filter(p => p._id !== postId);
+    savePosts(list);
+    alert("帖子已删除");
+    await loadMyPosts();
+    await renderList();
+}
+
+// ========== 编辑帖子 ==========
+function openEdit(postId){
+    const item = getPosts().find(p => p._id === postId);
+    if(!item) return;
+    document.querySelector("#editPostId").value = item._id;
+    document.querySelector("#editType").value = item.type;
+    document.querySelector("#editName").value = item.name;
+    document.querySelector("#editColor").value = item.color || "";
+    document.querySelector("#editCategory").value = item.category || "";
+    document.querySelector("#editDesc").value = item.desc || "";
+    document.querySelector("#editPhone").value = item.phone;
+    document.querySelector("#editImg").value = "";
+    editImgFile = null;
+    document.querySelector("#editImgPreview").innerHTML = item.imgUrl ? `<p style="font-size:12px;color:#888;">原图：</p><img src="${item.imgUrl}">` : "";
+    document.querySelector("#editMask").classList.add("show");
+}
+function closeEdit(){
+    document.querySelector("#editMask").classList.remove("show");
+    editImgFile = null;
+}
+document.querySelector("#editImg").addEventListener("change", function(e){
+    const file = e.target.files[0];
+    editImgFile = file || null;
+    const box = document.querySelector("#editImgPreview");
+    if(file){
+        const reader = new FileReader();
+        reader.onload = ev => { box.innerHTML = `<p style="font-size:12px;color:#888;">新图预览：</p><img src="${ev.target.result}">`; };
+        reader.readAsDataURL(file);
+    }else{
+        const item = getPosts().find(p => p._id === document.querySelector("#editPostId").value);
+        box.innerHTML = (item && item.imgUrl) ? `<p style="font-size:12px;color:#888;">原图：</p><img src="${item.imgUrl}">` : "";
+    }
+});
+async function doEdit(){
+    const _id = document.querySelector("#editPostId").value;
+    const type     = document.querySelector("#editType").value;
+    const name     = document.querySelector("#editName").value.trim();
+    const color    = document.querySelector("#editColor").value.trim();
+    const category = document.querySelector("#editCategory").value.trim();
+    const desc     = document.querySelector("#editDesc").value.trim();
+    const phone    = document.querySelector("#editPhone").value.trim();
+    if(!name || !phone){ alert("物品名称、联系电话必填"); return; }
+
+    const list = getPosts();
+    const item = list.find(p => p._id === _id);
+    if(!item) return;
+
+    if(editImgFile){
+        try{
+            item.imgUrl = await compressImage(editImgFile);
+        }catch(err){
+            console.error(err);
+            alert("图片处理失败，保留原图片");
+        }
+    }
+    item.type = type;
+    item.name = name;
+    item.color = color;
+    item.category = category;
+    item.desc = desc;
+    item.phone = phone;
+    item.status = "pending";      // 修改后重新审核
+    try{
+        savePosts(list);
+        alert("修改成功！已重新提交管理员审核");
+        closeEdit();
+        await loadMyPosts();
+        await renderList();
+    }catch(err){
+        console.error(err);
+        alert("保存失败：本地存储空间可能不足");
+    }
+}
+</script>
+</body>
+</html>
